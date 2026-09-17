@@ -1,23 +1,51 @@
 class NatsumiTabAnimationManager {
     constructor() {
-        this.tabListObserver = null;
+        this.openingTabs = new WeakSet();
+        this.animationTimers = new WeakMap();
+        this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     }
 
     init() {
-        this.tabListObserver = new MutationObserver((mutations) => {
-            for (let mutation of mutations) {
-                for (let tab of mutation.addedNodes) {
-                    this.runTabAnimation(tab);
-                }
-            }
-        });
+        const tabContainer = window.gBrowser?.tabContainer;
+        if (!tabContainer) {
+            return;
+        }
 
-        let unpinnedTabsList = document.getElementById("tabbrowser-arrowscrollbox");
-        this.tabListObserver.observe(unpinnedTabsList, {childList: true});
+        tabContainer.addEventListener("TabOpen", (event) => this.onTabOpen(event));
+        tabContainer.addEventListener("TabSelect", (event) => this.onTabSelect(event));
     }
 
-    runTabAnimation(tab) {
-        if (tab.getAttribute("pending") === true || tab.hasAttribute("natsumi-animation-done")) {
+    onTabOpen(event) {
+        const tab = event.target;
+        if (!tab?.classList?.contains("tabbrowser-tab")) {
+            return;
+        }
+
+        this.openingTabs.add(tab);
+        window.requestAnimationFrame(() => this.runTabOpenAnimation(tab));
+    }
+
+    onTabSelect(event) {
+        const tab = event.target;
+        const previousTab = event.detail?.previousTab;
+        if (
+            !tab?.classList?.contains("tabbrowser-tab") ||
+            tab !== window.gBrowser.selectedTab ||
+            !previousTab ||
+            previousTab === tab
+        ) {
+            return;
+        }
+
+        if (!this.openingTabs.has(tab)) {
+            this.restartAnimation(tab, "natsumi-tab-switch-animation", "", 167);
+        }
+        this.runPageTransition("refresh");
+    }
+
+    runTabOpenAnimation(tab) {
+        if (!tab.isConnected || this.reducedMotion.matches) {
+            this.openingTabs.delete(tab);
             return;
         }
 
@@ -28,16 +56,42 @@ class NatsumiTabAnimationManager {
         const paddingTop = window.getComputedStyle(tab).paddingTop;
         const paddingBottom = window.getComputedStyle(tab).paddingBottom;
 
-        tab.style.setProperty("--natsumi-animation–width", `calc(${tabWidth}px - ${paddingLeft} - ${paddingRight})`);
-        tab.style.setProperty("--natsumi-animation–height", `calc(${tabHeight}px - ${paddingTop} - ${paddingBottom})`);
-        tab.setAttribute("natsumi-animation-incoming", "true");
-        tab.setAttribute("natsumi-animation", "true");
-        tab.removeAttribute("natsumi-animation-incoming");
+        tab.style.setProperty("--natsumi-animation-width", `calc(${tabWidth}px - ${paddingLeft} - ${paddingRight})`);
+        tab.style.setProperty("--natsumi-animation-height", `calc(${tabHeight}px - ${paddingTop} - ${paddingBottom})`);
+        this.restartAnimation(tab, "natsumi-animation", "", 250, () => {
+            this.openingTabs.delete(tab);
+        });
+    }
 
-        setTimeout(() => {
-            tab.removeAttribute("natsumi-animation");
-            tab.setAttribute("natsumi-animation-done", "");
-        }, 200);
+    runPageTransition(direction) {
+        // Start on the incoming browser at selection time. If Firefox needs to
+        // wait for its layer, the animation expires instead of playing late.
+        const browser = window.gBrowser.selectedBrowser;
+        const pageViewport = browser?.closest(".browserStack") ?? browser;
+        this.restartAnimation(pageViewport, "natsumi-page-transition", direction, 250);
+    }
+
+    restartAnimation(element, attribute, value, duration, onFinish = null) {
+        if (!element || this.reducedMotion.matches) {
+            onFinish?.();
+            return;
+        }
+
+        const previousTimer = this.animationTimers.get(element);
+        if (previousTimer) {
+            window.clearTimeout(previousTimer);
+        }
+
+        element.removeAttribute(attribute);
+        void element.getBoundingClientRect().width;
+        element.setAttribute(attribute, value);
+
+        const timer = window.setTimeout(() => {
+            element.removeAttribute(attribute);
+            this.animationTimers.delete(element);
+            onFinish?.();
+        }, duration + 50);
+        this.animationTimers.set(element, timer);
     }
 }
 
