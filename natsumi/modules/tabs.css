@@ -44,43 +44,55 @@ SOFTWARE.
 
 @keyframes natsumi-tab-appear {
   from {
-    opacity: 0;
-    scale: 0;
-    translate: -50% 0;
+    scale: 0.92;
+    translate: -12px 0;
     width: 0;
+  }
+
+  to {
+    scale: 1;
+    translate: 0;
+    width: var(--natsumi-animation-width);
+  }
+}
+
+@keyframes natsumi-tab-enter {
+  from {
+    opacity: 0.65;
+    scale: 0.94;
+    translate: -10px 0;
   }
 
   to {
     opacity: 1;
     scale: 1;
     translate: 0;
-    width: var(--natsumi-animation–width);
   }
 }
 
 @keyframes natsumi-tab-appear-vertical {
   from {
-    opacity: 0;
-    scale: 0;
-    translate: 0 -50%;
+    scale: 0.92;
+    translate: 0 -8px;
     height: 0;
   }
 
   to {
-    opacity: 1;
     scale: 1;
     translate: 0;
-    height: var(--natsumi-animation–height);
+    height: var(--natsumi-animation-height);
   }
 }
 
-@keyframes natsumi-tab-appear-blur {
+@keyframes natsumi-tab-select {
   from {
-    filter: blur(24px);
+    opacity: 0.72;
+    translate: 0 4px;
   }
 
   to {
-    filter: blur(0);
+    opacity: 1;
+    translate: 0;
   }
 }
 
@@ -105,20 +117,30 @@ SOFTWARE.
 }
 
 #tabbrowser-arrowscrollbox .tabbrowser-tab {
-  &[natsumi-animation]:not([pending="true"]) {
-    animation: natsumi-tab-appear-blur 0.2s ease;
+  &[natsumi-animation] {
+    transform-origin: left center;
+    animation: natsumi-tab-enter 250ms cubic-bezier(0, 0, 0, 1) both;
     min-width: unset !important;
     min-height: unset !important;
 
+    @media -moz-pref("sidebar.verticalTabs") {
+      transform-origin: center top;
+    }
+
     .tab-stack {
-      animation: natsumi-tab-appear 0.2s ease;
-      animation-fill-mode: forwards;
+      transform-origin: left center;
+      animation: natsumi-tab-appear 250ms cubic-bezier(0, 0, 0, 1) both;
 
       @media -moz-pref("sidebar.verticalTabs") {
-        animation: natsumi-tab-appear-vertical 0.2s ease;
-        animation-fill-mode: forwards;
+        transform-origin: center top;
+        animation-name: natsumi-tab-appear-vertical;
       }
     }
+  }
+
+  &[natsumi-tab-switch-animation] .tab-background {
+    transform-origin: center;
+    animation: natsumi-tab-select 167ms cubic-bezier(0, 0, 0, 1) both;
   }
 
   &[natsumi-glimpse-selected] {
@@ -133,6 +155,16 @@ SOFTWARE.
 
   .tab-loading-burst {
     --tab-loading-fill: light-dark(var(--natsumi-colors-primary), var(--natsumi-primary-color)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #tabbrowser-arrowscrollbox .tabbrowser-tab {
+    &[natsumi-animation],
+    &[natsumi-animation] .tab-stack,
+    &[natsumi-tab-switch-animation] .tab-background {
+      animation: none !important;
+    }
   }
 }
 
