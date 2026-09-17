@@ -137,6 +137,8 @@ toolbarseparator.proton-zap::before {
 
 :root:not([inDOMFullscreen="true"]):not([drawtitle]) {
   &:is([chromehidden=""], :not([chromehidden])) #browser:not([data-is-child="true"]) #tabbrowser-tabbox {
+    margin-top: var(--natsumi-tabbox-margin-override, var(--natsumi-browser-separation)) !important;
+    margin-left: var(--natsumi-tabbox-margin-override, var(--natsumi-browser-separation)) !important;
     margin-right: var(--natsumi-tabbox-margin-override, var(--natsumi-browser-separation)) !important;
     margin-bottom: var(--natsumi-tabbox-margin-override, var(--natsumi-browser-separation)) !important;
     box-shadow: none !important;
