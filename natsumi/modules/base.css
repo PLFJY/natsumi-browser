@@ -29,7 +29,7 @@ SOFTWARE.
 @keyframes natsumi-page-refresh {
   from {
     opacity: 0.72;
-    translate: 0 16px;
+    translate: 0 140px;
   }
 
   to {
@@ -39,7 +39,7 @@ SOFTWARE.
 }
 
 #tabbrowser-tabbox :is(.browserStack, browser)[natsumi-page-transition="refresh"] {
-  animation: natsumi-page-refresh 250ms cubic-bezier(0, 0, 0, 1) both;
+  animation: natsumi-page-refresh 300ms cubic-bezier(0, 0, 0, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -68,7 +68,7 @@ class NatsumiTabAnimationManager {
         // wait for its layer, the animation expires instead of playing late.
         const browser = window.gBrowser.selectedBrowser;
         const pageViewport = browser?.closest(".browserStack") ?? browser;
-        this.restartAnimation(pageViewport, "natsumi-page-transition", direction, 250);
+        this.restartAnimation(pageViewport, "natsumi-page-transition", direction, 300);
     }
 
     restartAnimation(element, attribute, value, duration, onFinish = null) {
