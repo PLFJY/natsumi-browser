@@ -104,7 +104,7 @@ SOFTWARE.
       }
     }
 
-    .urlbar-page-action, .urlbar-revert-button {
+    .urlbar-page-action:not(#urlbar-zoom-button), .urlbar-revert-button {
       border-radius: 14px !important;
       width: var(--natsumi-urlbar-button-size) !important;
       height: var(--natsumi-urlbar-button-size) !important;
@@ -119,6 +119,14 @@ SOFTWARE.
         background-color: var(--natsumi-button-active-color) !important;
         box-shadow: 0 0 4px rgba(0, 0, 0, 0.3) !important;
       }
+    }
+
+    #urlbar-zoom-button {
+      --urlbar-inner-border-radius: var(--border-radius-circle);
+      --urlbar-box-background-color: var(--natsumi-urlbar-button-accent-color);
+      --urlbar-box-background-color-focus: var(--natsumi-urlbar-button-accent-color);
+      width: auto !important;
+      height: auto !important;
     }
 
     .urlbar-revert-button {
@@ -429,7 +437,7 @@ SOFTWARE.
           transition: background-color 0.2s ease;
         }
 
-        .urlbar-page-action {
+        .urlbar-page-action:not(#urlbar-zoom-button) {
           border-radius: 8px !important;
           transition: background-color 0.2s ease, box-shadow 0.2s ease, width 0.2s ease, padding 0.2s ease, margin 0.2s ease, opacity 0.2s ease;
         }

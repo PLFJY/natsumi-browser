@@ -409,7 +409,7 @@ toolbarseparator.proton-zap::before {
     padding-inline: 4px 8px !important;
   }
 
-  & > toolbaritem toolbarbutton {
+  & > toolbaritem toolbarbutton:not(#urlbar-zoom-button) {
     padding-inline: 0 !important;
   }
 
@@ -477,7 +477,7 @@ toolbarseparator.proton-zap::before {
     }
   }
 
-  &#nav-bar-customization-target toolbarbutton:not(#urlbar-searchmode-switcher) {
+  &#nav-bar-customization-target toolbarbutton:not(#urlbar-searchmode-switcher, #urlbar-zoom-button) {
     max-height: var(--natsumi-button-height) !important;
     min-height: var(--natsumi-button-height) !important;
   }
