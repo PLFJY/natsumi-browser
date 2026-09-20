@@ -41,21 +41,21 @@ SOFTWARE.
       }
     }
 
-    .close-icon {
-      transition: background-color 0.1s ease-out;
-
-      &:hover {
-        background-color: rgba(255, 100, 100, 0.90) !important;
-        transition: background-color 0.1s ease-in;
-      }
-    }
-
     &[selected], &[visuallyselected], &[natsumi-glimpse-selected], &[multiselected] {
       & > .tab-stack > .tab-background {
         background: light-dark(rgb(255, 255, 255), rgba(255, 255, 255, 0.17)) !important;
         border-top: 1px solid light-dark(#8888882d, #ffffff2d) !important;
         border-bottom: 1px solid #0000002d !important;
       }
+    }
+  }
+
+  #tabbrowser-tabs:is([expanded], [orient="horizontal"]) #tabbrowser-arrowscrollbox .tabbrowser-tab .close-icon {
+    transition: background-color 0.1s ease-out;
+
+    &:hover {
+      background-color: rgba(255, 100, 100, 0.90) !important;
+      transition: background-color 0.1s ease-in;
     }
   }
 
