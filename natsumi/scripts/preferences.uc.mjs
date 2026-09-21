@@ -865,6 +865,12 @@ const startupAnimations = {
         null,
         "<div id='startup-simple' class='natsumi-mc-choice-image-browser'></div>"
     ),
+    "firefox-kit": new MCChoice(
+        "firefox-kit",
+        "Firefox Kit",
+        null,
+        "<div id='startup-firefox-kit' class='natsumi-mc-choice-image-browser'></div>"
+    ),
     "nostalgic": new MCChoice(
         "nostalgic",
         "Nostalgic",

@@ -35,12 +35,85 @@ import {getFile} from "./files.sys.mjs";
 import {NatsumiNotification} from "./notifications.sys.mjs";
 import {resetTabStyleIfNeeded} from "./reset-tab-style.sys.mjs";
 
+// Adjust this value to change the startup animation speed after restarting Firefox.
+// 1 = normal, 0.5 = half speed, 2 = double speed. Values from 0.05 to 3 are accepted.
+const FIREFOX_KIT_PLAYBACK_RATE = 1.25;
+const FIREFOX_KIT_FADE_MS = 220;
+const FIREFOX_KIT_FALLBACK_DURATION_MS = 2100;
+const FIREFOX_KIT_ASSET_URL = "chrome://natsumi/content/icons/firefox-kit-startup.svg";
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
 let natsumiWelcomeObject = null;
 const requiredFirefox = 140;
 
 function convertToXUL(node) {
     // noinspection JSUnresolvedReference
     return window.MozXULElement.parseXULToFragment(node);
+}
+
+function scaleSmilClockList(value, rate) {
+    return String(value).split(";").map(part => {
+        const match = part.trim().match(/^([0-9]*\.?[0-9]+)\s*(ms|s|min|h)?$/i);
+        if (!match) {
+            return part;
+        }
+
+        const amount = Number(match[1]) / rate;
+        return `${Number(amount.toFixed(6))}${match[2] || "s"}`;
+    }).join(";");
+}
+
+async function createFirefoxKitAsset(rate) {
+    if (rate === 1) {
+        return {
+            url: FIREFOX_KIT_ASSET_URL,
+            duration: FIREFOX_KIT_FALLBACK_DURATION_MS,
+            revoke: false
+        };
+    }
+
+    try {
+        const response = await fetch(FIREFOX_KIT_ASSET_URL);
+        const source = await response.text();
+        const svgDocument = new DOMParser().parseFromString(source, "image/svg+xml");
+        const svgRoot = svgDocument.documentElement;
+        if (svgRoot.localName === "parsererror") {
+            throw new Error("Firefox Kit SVG could not be parsed");
+        }
+
+        const sourceDuration = Number(svgRoot.getAttribute("data-duration-ms"));
+        const duration = Number.isFinite(sourceDuration) && sourceDuration > 0
+            ? sourceDuration
+            : FIREFOX_KIT_FALLBACK_DURATION_MS;
+        const animationTags = ["animate", "animateTransform", "animateMotion", "animateColor", "set"];
+
+        for (const tagName of animationTags) {
+            const animations = svgDocument.getElementsByTagNameNS(SVG_NAMESPACE, tagName);
+            for (let index = 0; index < animations.length; index++) {
+                const animation = animations[index];
+                for (const attribute of ["begin", "dur", "repeatDur"]) {
+                    if (animation.hasAttribute(attribute)) {
+                        animation.setAttribute(
+                            attribute,
+                            scaleSmilClockList(animation.getAttribute(attribute), rate)
+                        );
+                    }
+                }
+            }
+        }
+
+        svgRoot.setAttribute("data-duration-ms", String(duration / rate));
+        const serialized = new XMLSerializer().serializeToString(svgDocument);
+        const url = URL.createObjectURL(new Blob([serialized], {type: "image/svg+xml"}));
+        return {url, duration: duration / rate, revoke: true};
+    } catch (error) {
+        console.error("Failed to create the speed-adjusted Firefox Kit SVG:", error);
+        return {
+            url: FIREFOX_KIT_ASSET_URL,
+            duration: FIREFOX_KIT_FALLBACK_DURATION_MS,
+            revoke: false
+        };
+    }
 }
 
 function waitForAudioLoad(audio) {
@@ -435,34 +508,93 @@ class NatsumiDefaultStartupAnimation extends NatsumiBaseStartupAnimation {
             ["quotes? in my browser???", null],
             ["Eat ice cream for a huge buff.", "@therealconfused"],
             ["Natsumi is your browser mod. Good choice.", null]
-        ]
+        ];
 
-        // Pick a random quote
         const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-        const quoteText = randomQuote[0];
-        const quoteAuthor = randomQuote[1];
+        const randomQuoteText = randomQuote[0];
+        const randomQuoteAuthor = randomQuote[1];
 
-        // Add icon
         let iconContainer = document.createElement("div");
         iconContainer.id = "natsumi-startup-icon";
         this.startupNode.appendChild(iconContainer);
 
-        // Add quote
         let quoteContainer = document.createElement("div");
         quoteContainer.id = "natsumi-startup-quote";
         this.startupNode.appendChild(quoteContainer);
 
         let quoteTextContainer = document.createElement("div");
         quoteTextContainer.id = "natsumi-startup-quote-text";
-        quoteTextContainer.textContent = quoteText;
+        quoteTextContainer.textContent = randomQuoteText;
         quoteContainer.appendChild(quoteTextContainer);
 
-        if (quoteAuthor) {
+        if (randomQuoteAuthor) {
             let quoteAuthorContainer = document.createElement("div");
             quoteAuthorContainer.id = "natsumi-startup-quote-author";
-            quoteAuthorContainer.textContent = `- ${quoteAuthor}`;
+            quoteAuthorContainer.textContent = `- ${randomQuoteAuthor}`;
             quoteContainer.appendChild(quoteAuthorContainer);
         }
+
+        if (this.audio) {
+            let audioPromise = waitForAudioPlay(this.audio);
+            try {
+                await this.audio.play();
+                await audioPromise;
+            } catch(e) {
+                console.error("Failed to play startup audio:", e);
+            }
+        }
+
+        this.revealStartup();
+
+        setTimeout(() => {
+            this.revealBrowser();
+        }, 1000);
+
+        setTimeout(() => {
+            this.completeAnimation();
+        }, 1200);
+    }
+}
+
+class FirefoxKitStartupAnimation extends NatsumiBaseStartupAnimation {
+    async play() {
+        const randomQuotes = [
+            ["when the natsumi is browser", null],
+            ["Welcome to your personal internet.", null],
+            ["Have you riced your browser today?", null],
+            ["nya :3", null],
+            ["stay hydrated!!!1", null],
+            ["quotes? in my browser???", null],
+            ["Eat ice cream for a huge buff.", "@therealconfused"],
+            ["Natsumi is your browser mod. Good choice.", null]
+        ];
+        const randomQuote = randomQuotes[Math.floor(Math.random() * randomQuotes.length)];
+        const randomQuoteText = randomQuote[0];
+        const randomQuoteAuthor = randomQuote[1];
+
+        // The SVG contains the complete Firefox-to-Kit motion sequence.
+        let iconContainer = document.createElement("div");
+        iconContainer.id = "natsumi-startup-firefox-kit";
+        this.startupNode.appendChild(iconContainer);
+
+        let quoteContainer = document.createElement("div");
+        quoteContainer.id = "natsumi-startup-quote";
+        this.startupNode.appendChild(quoteContainer);
+
+        let quoteTextContainer = document.createElement("div");
+        quoteTextContainer.id = "natsumi-startup-quote-text";
+        quoteTextContainer.textContent = randomQuoteText;
+        quoteContainer.appendChild(quoteTextContainer);
+
+        if (randomQuoteAuthor) {
+            let quoteAuthorContainer = document.createElement("div");
+            quoteAuthorContainer.id = "natsumi-startup-quote-author";
+            quoteAuthorContainer.textContent = `- ${randomQuoteAuthor}`;
+            quoteContainer.appendChild(quoteAuthorContainer);
+        }
+
+        const rate = Math.max(0.05, Math.min(3, Number(FIREFOX_KIT_PLAYBACK_RATE) || 1));
+        const assetPromise = createFirefoxKitAsset(rate);
 
         this.audio.addEventListener("play", () => {console.log("play", Date.now())});
         this.audio.addEventListener("playing", () => {console.log("playing", Date.now())});
@@ -480,15 +612,76 @@ class NatsumiDefaultStartupAnimation extends NatsumiBaseStartupAnimation {
 
         console.log("start", Date.now());
 
+        let asset = await assetPromise;
+        let usingFallbackAsset = asset.url === FIREFOX_KIT_ASSET_URL;
+        const iconImage = document.createElement("img");
+        iconImage.alt = "";
+        iconImage.draggable = false;
+
+        const imageReady = new Promise(resolve => {
+            iconImage.addEventListener("load", () => resolve(true), {once: true});
+            iconImage.addEventListener("error", () => {
+                if (!usingFallbackAsset) {
+                    if (asset.revoke) {
+                        URL.revokeObjectURL(asset.url);
+                    }
+                    usingFallbackAsset = true;
+                    asset = {
+                        url: FIREFOX_KIT_ASSET_URL,
+                        duration: FIREFOX_KIT_FALLBACK_DURATION_MS,
+                        revoke: false
+                    };
+                    iconImage.src = asset.url;
+                } else {
+                    resolve(false);
+                }
+            });
+        });
+
+        let cleanupTriggered = false;
+        const fadeAndRemoveStartup = () => {
+            if (cleanupTriggered) {
+                return;
+            }
+            cleanupTriggered = true;
+
+            try {
+                this.revealBrowser();
+            } catch (error) {
+                console.error("Failed to reveal the browser after startup:", error);
+            }
+
+            setTimeout(() => {
+                try {
+                    this.completeAnimation();
+                } catch (error) {
+                    console.error("Failed to remove the startup layer:", error);
+                    this.startupNode?.remove();
+                    document.body?.removeAttribute("natsumi-startup-animation");
+                    document.body?.removeAttribute("natsumi-startup-animation-reveal");
+                } finally {
+                    if (asset.revoke) {
+                        URL.revokeObjectURL(asset.url);
+                    }
+                }
+            }, FIREFOX_KIT_FADE_MS);
+        };
+
+        // Reveal the container before assigning src so native SMIL playback
+        // begins while the image is visible, matching the original player.
+        iconContainer.appendChild(iconImage);
         this.revealStartup();
+        iconImage.src = asset.url;
 
-        setTimeout(() => {
-            this.revealBrowser();
-        }, 1000);
+        // A broken asset can never leave the startup layer covering the browser.
+        let fadeTimer = setTimeout(fadeAndRemoveStartup, asset.duration);
+        await imageReady;
+        if (cleanupTriggered) {
+            return;
+        }
 
-        setTimeout(() => {
-            this.completeAnimation();
-        }, 1200);
+        clearTimeout(fadeTimer);
+        fadeTimer = setTimeout(fadeAndRemoveStartup, asset.duration);
     }
 }
 
@@ -1206,6 +1399,7 @@ function setupInitialConfig() {
 async function runStartupAnimation() {
     const startupAnimations = {
         "simple": new NatsumiDefaultStartupAnimation(),
+        "firefox-kit": new FirefoxKitStartupAnimation(),
         "nostalgic": new NatsumiXPStartupAnimation()
     };
     const startupSounds = {
@@ -1218,7 +1412,7 @@ async function runStartupAnimation() {
         startupAnimation = ucApi.Prefs.get("natsumi.startup.type").value;
     }
 
-    if (!startupAnimation in startupAnimations) {
+    if (!(startupAnimation in startupAnimations)) {
         return;
     }
 
@@ -1227,7 +1421,7 @@ async function runStartupAnimation() {
         startupSound = ucApi.Prefs.get("natsumi.startup.sound").value;
     }
 
-    if (!startupSound in startupSounds && startupSound !== "custom") {
+    if (!(startupSound in startupSounds) && startupSound !== "custom") {
         startupSound = "default";
     }
 
@@ -1384,9 +1578,20 @@ try {
 }
 
 // Play startup animation
+// Keep the animation that was previously installed in the "Simple" slot selected
+// after it becomes its own settings option. This migration runs only once.
+const firefoxKitOptionMigrationPref = "natsumi.startup.firefox-kit-option-migrated";
+if (!ucApi.Prefs.get(firefoxKitOptionMigrationPref).exists()) {
+    if (ucApi.Prefs.get("natsumi.startup.type").exists()
+        && ucApi.Prefs.get("natsumi.startup.type").value === "simple") {
+        ucApi.Prefs.set("natsumi.startup.type", "firefox-kit");
+    }
+    ucApi.Prefs.set(firefoxKitOptionMigrationPref, true);
+}
+
 let startupEnabled = false;
 if (ucApi.Prefs.get("natsumi.startup.type").exists()) {
-    startupEnabled = ucApi.Prefs.get("natsumi.startup.tyoe").value !== "default";
+    startupEnabled = ucApi.Prefs.get("natsumi.startup.type").value !== "default";
 }
 
 if ((!blockProgress || !earlyBlockProgress) && startupEnabled && isBrowser) {
