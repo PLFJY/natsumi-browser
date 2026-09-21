@@ -1207,6 +1207,11 @@ SOFTWARE.
       background-image: url("../icons/natsumi-glass.png");
     }
 
+    #startup-firefox-kit {
+      background-size: contain;
+      background-image: url("../icons/firefox-kit-preview.svg");
+    }
+
     #startup-nostalgic {
       background-color: black;
       background-size: 32px;
