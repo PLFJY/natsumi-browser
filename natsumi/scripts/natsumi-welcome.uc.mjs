@@ -35,13 +35,9 @@ import {getFile} from "./files.sys.mjs";
 import {NatsumiNotification} from "./notifications.sys.mjs";
 import {resetTabStyleIfNeeded} from "./reset-tab-style.sys.mjs";
 
-// Adjust this value to change the startup animation speed after restarting Firefox.
-// 1 = normal, 0.5 = half speed, 2 = double speed. Values from 0.05 to 3 are accepted.
-const FIREFOX_KIT_PLAYBACK_RATE = 1.25;
-const FIREFOX_KIT_FADE_MS = 220;
-const FIREFOX_KIT_FALLBACK_DURATION_MS = 2100;
-const FIREFOX_KIT_ASSET_URL = "chrome://natsumi/content/icons/firefox-kit-startup.svg";
-const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const FIREFOX_KIT_DURATION_MS = 1250;
+const FIREFOX_KIT_FADE_MS = 200;
+const FIREFOX_KIT_ASSET_URL = "chrome://natsumi/content/icons/firefox-kit-startup.webp";
 
 let natsumiWelcomeObject = null;
 const requiredFirefox = 140;
@@ -49,71 +45,6 @@ const requiredFirefox = 140;
 function convertToXUL(node) {
     // noinspection JSUnresolvedReference
     return window.MozXULElement.parseXULToFragment(node);
-}
-
-function scaleSmilClockList(value, rate) {
-    return String(value).split(";").map(part => {
-        const match = part.trim().match(/^([0-9]*\.?[0-9]+)\s*(ms|s|min|h)?$/i);
-        if (!match) {
-            return part;
-        }
-
-        const amount = Number(match[1]) / rate;
-        return `${Number(amount.toFixed(6))}${match[2] || "s"}`;
-    }).join(";");
-}
-
-async function createFirefoxKitAsset(rate) {
-    if (rate === 1) {
-        return {
-            url: FIREFOX_KIT_ASSET_URL,
-            duration: FIREFOX_KIT_FALLBACK_DURATION_MS,
-            revoke: false
-        };
-    }
-
-    try {
-        const response = await fetch(FIREFOX_KIT_ASSET_URL);
-        const source = await response.text();
-        const svgDocument = new DOMParser().parseFromString(source, "image/svg+xml");
-        const svgRoot = svgDocument.documentElement;
-        if (svgRoot.localName === "parsererror") {
-            throw new Error("Firefox Kit SVG could not be parsed");
-        }
-
-        const sourceDuration = Number(svgRoot.getAttribute("data-duration-ms"));
-        const duration = Number.isFinite(sourceDuration) && sourceDuration > 0
-            ? sourceDuration
-            : FIREFOX_KIT_FALLBACK_DURATION_MS;
-        const animationTags = ["animate", "animateTransform", "animateMotion", "animateColor", "set"];
-
-        for (const tagName of animationTags) {
-            const animations = svgDocument.getElementsByTagNameNS(SVG_NAMESPACE, tagName);
-            for (let index = 0; index < animations.length; index++) {
-                const animation = animations[index];
-                for (const attribute of ["begin", "dur", "repeatDur"]) {
-                    if (animation.hasAttribute(attribute)) {
-                        animation.setAttribute(
-                            attribute,
-                            scaleSmilClockList(animation.getAttribute(attribute), rate)
-                        );
-                    }
-                }
-            }
-        }
-
-        svgRoot.setAttribute("data-duration-ms", String(duration / rate));
-        const serialized = new XMLSerializer().serializeToString(svgDocument);
-        const url = URL.createObjectURL(new Blob([serialized], {type: "image/svg+xml"}));
-        return {url, duration: duration / rate, revoke: true};
-    } catch (error) {
-        console.error("Failed to create the speed-adjusted Firefox Kit SVG:", error);
-        return {
-            url: FIREFOX_KIT_ASSET_URL,
-            duration: FIREFOX_KIT_FALLBACK_DURATION_MS,
-            revoke: false
-        };
-    }
 }
 
 function waitForAudioLoad(audio) {
@@ -498,6 +429,11 @@ class NatsumiBaseStartupAnimation {
 }
 
 class NatsumiDefaultStartupAnimation extends NatsumiBaseStartupAnimation {
+    constructor(iconType = "natsumi") {
+        super();
+        this.iconType = iconType;
+    }
+
     async play() {
         const quotes = [
             ["when the natsumi is browser", null],
@@ -515,8 +451,18 @@ class NatsumiDefaultStartupAnimation extends NatsumiBaseStartupAnimation {
         const randomQuoteAuthor = randomQuote[1];
 
         let iconContainer = document.createElement("div");
-        iconContainer.id = "natsumi-startup-icon";
+        iconContainer.id = this.iconType === "firefox"
+            ? "natsumi-startup-firefox-icon"
+            : "natsumi-startup-icon";
         this.startupNode.appendChild(iconContainer);
+
+        if (this.iconType === "firefox") {
+            const iconImage = document.createElement("img");
+            iconImage.src = "chrome://natsumi/content/icons/firefox-icon.svg";
+            iconImage.alt = "";
+            iconImage.draggable = false;
+            iconContainer.appendChild(iconImage);
+        }
 
         let quoteContainer = document.createElement("div");
         quoteContainer.id = "natsumi-startup-quote";
@@ -572,7 +518,7 @@ class FirefoxKitStartupAnimation extends NatsumiBaseStartupAnimation {
         const randomQuoteText = randomQuote[0];
         const randomQuoteAuthor = randomQuote[1];
 
-        // The SVG contains the complete Firefox-to-Kit motion sequence.
+        // The animation contains the complete Firefox-to-Kit motion sequence.
         let iconContainer = document.createElement("div");
         iconContainer.id = "natsumi-startup-firefox-kit";
         this.startupNode.appendChild(iconContainer);
@@ -593,57 +539,23 @@ class FirefoxKitStartupAnimation extends NatsumiBaseStartupAnimation {
             quoteContainer.appendChild(quoteAuthorContainer);
         }
 
-        const rate = Math.max(0.05, Math.min(3, Number(FIREFOX_KIT_PLAYBACK_RATE) || 1));
-        const assetPromise = createFirefoxKitAsset(rate);
-
-        this.audio.addEventListener("play", () => {console.log("play", Date.now())});
-        this.audio.addEventListener("playing", () => {console.log("playing", Date.now())});
-
-        // Play startup sound
-        if (this.audio) {
-            let audioPromise = waitForAudioPlay(this.audio);
-            try {
-                await this.audio.play();
-                await audioPromise;
-            } catch(e) {
-                console.error("Failed to play startup audio:", e);
-            }
-        }
-
-        console.log("start", Date.now());
-
-        let asset = await assetPromise;
-        let usingFallbackAsset = asset.url === FIREFOX_KIT_ASSET_URL;
         const iconImage = document.createElement("img");
         iconImage.alt = "";
         iconImage.draggable = false;
+        iconContainer.appendChild(iconImage);
 
-        const imageReady = new Promise(resolve => {
-            iconImage.addEventListener("load", () => resolve(true), {once: true});
-            iconImage.addEventListener("error", () => {
-                if (!usingFallbackAsset) {
-                    if (asset.revoke) {
-                        URL.revokeObjectURL(asset.url);
-                    }
-                    usingFallbackAsset = true;
-                    asset = {
-                        url: FIREFOX_KIT_ASSET_URL,
-                        duration: FIREFOX_KIT_FALLBACK_DURATION_MS,
-                        revoke: false
-                    };
-                    iconImage.src = asset.url;
-                } else {
-                    resolve(false);
-                }
-            });
-        });
-
+        let fadeTimer = null;
         let cleanupTriggered = false;
         const fadeAndRemoveStartup = () => {
             if (cleanupTriggered) {
                 return;
             }
             cleanupTriggered = true;
+
+            if (fadeTimer !== null) {
+                clearTimeout(fadeTimer);
+                fadeTimer = null;
+            }
 
             try {
                 this.revealBrowser();
@@ -659,29 +571,40 @@ class FirefoxKitStartupAnimation extends NatsumiBaseStartupAnimation {
                     this.startupNode?.remove();
                     document.body?.removeAttribute("natsumi-startup-animation");
                     document.body?.removeAttribute("natsumi-startup-animation-reveal");
-                } finally {
-                    if (asset.revoke) {
-                        URL.revokeObjectURL(asset.url);
-                    }
                 }
             }, FIREFOX_KIT_FADE_MS);
         };
 
-        // Reveal the container before assigning src so native SMIL playback
-        // begins while the image is visible, matching the original player.
-        iconContainer.appendChild(iconImage);
-        this.revealStartup();
-        iconImage.src = asset.url;
+        iconImage.addEventListener("error", () => {
+            console.error("Failed to load the Firefox Kit animation");
+            fadeAndRemoveStartup();
+        }, {once: true});
 
-        // A broken asset can never leave the startup layer covering the browser.
-        let fadeTimer = setTimeout(fadeAndRemoveStartup, asset.duration);
-        await imageReady;
-        if (cleanupTriggered) {
-            return;
+        iconImage.addEventListener("load", () => {
+            if (cleanupTriggered) {
+                return;
+            }
+            if (fadeTimer !== null) {
+                clearTimeout(fadeTimer);
+            }
+            fadeTimer = setTimeout(fadeAndRemoveStartup, FIREFOX_KIT_DURATION_MS);
+        }, {once: true});
+
+        if (this.audio) {
+            let audioPromise = waitForAudioPlay(this.audio);
+            try {
+                await this.audio.play();
+                await audioPromise;
+            } catch(e) {
+                console.error("Failed to play startup audio:", e);
+            }
         }
 
-        clearTimeout(fadeTimer);
-        fadeTimer = setTimeout(fadeAndRemoveStartup, asset.duration);
+        // The 60 fps WebP has the SVG motion pre-rendered, so startup only
+        // needs to decode and display frames instead of morphing SVG paths.
+        this.revealStartup();
+        iconImage.src = FIREFOX_KIT_ASSET_URL;
+        fadeTimer = setTimeout(fadeAndRemoveStartup, FIREFOX_KIT_DURATION_MS + 250);
     }
 }
 
@@ -1399,6 +1322,7 @@ function setupInitialConfig() {
 async function runStartupAnimation() {
     const startupAnimations = {
         "simple": new NatsumiDefaultStartupAnimation(),
+        "firefox-icon": new NatsumiDefaultStartupAnimation("firefox"),
         "firefox-kit": new FirefoxKitStartupAnimation(),
         "nostalgic": new NatsumiXPStartupAnimation()
     };
