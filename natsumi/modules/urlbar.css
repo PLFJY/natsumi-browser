@@ -634,8 +634,17 @@ SOFTWARE.
       color-scheme: unset !important;
 
       &:not([natsumi-urlbar-legacy]) {
-        position: fixed !important;
         flex-direction: column !important;
+
+        /* Keep the inline bar in the toolbar's flex layout. Fixed positioning
+           with an auto width makes it shrink to its contents when opened. */
+        @media -moz-pref("natsumi.urlbar.do-not-float") {
+          position: relative !important;
+        }
+
+        @media not -moz-pref("natsumi.urlbar.do-not-float") {
+          position: fixed !important;
+        }
       }
 
       @media -moz-pref("natsumi.urlbar.do-not-float") {
