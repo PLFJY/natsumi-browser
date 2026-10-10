@@ -648,6 +648,10 @@ SOFTWARE.
         }
 
         &:not([natsumi-urlbar-legacy]) {
+          /* Keep the inline bar in the toolbar's flex layout when opened. */
+          position: relative !important;
+          flex-direction: column !important;
+
           @media -moz-pref("browser.nova.enabled") {
             .urlbar-background {
               clip-path: unset !important;
