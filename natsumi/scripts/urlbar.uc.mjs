@@ -184,35 +184,13 @@ class NatsumiURLBarController {
             verticalNewTabButton.setAttribute("command", "NatsumiKBS:natsumiNewTab");
         }
 
-        // Remove urlbarView popover
+        // Firefox opens the suggestions with showPopover(), so the view must
+        // keep its popover attribute in both Classic and Floating modes.
         let urlbarView = this.urlBarNode.querySelector(".urlbarView");
-        let isFloating = true;
-
-        if (ucApi.Prefs.get("natsumi.urlbar.do-not-float").exists) {
-            isFloating = !ucApi.Prefs.get("natsumi.urlbar.do-not-float").value;
-        }
 
         if (!urlbarView.hasAttribute("popover")) {
             this.urlBarNode.setAttribute("natsumi-urlbar-legacy", "");
             urlbarView.setAttribute("natsumi-urlbar-legacy", "");
-        } else {
-            if (isFloating) {
-                urlbarView.removeAttribute("popover");
-            }
-
-            Services.prefs.addObserver("natsumi.urlbar.do-not-float", () => {
-                let isFloating = true;
-
-                if (ucApi.Prefs.get("natsumi.urlbar.do-not-float").exists) {
-                    isFloating = !ucApi.Prefs.get("natsumi.urlbar.do-not-float").value;
-                }
-
-                if (isFloating) {
-                    urlbarView.removeAttribute("popover");
-                } else {
-                    urlbarView.setAttribute("popover", "manual");
-                }
-            });
         }
     }
 
