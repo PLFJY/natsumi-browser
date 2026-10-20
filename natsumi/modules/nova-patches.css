@@ -672,8 +672,16 @@ SOFTWARE.
     border-top: var(--natsumi-mat-th-border-thin) !important;
   }
 
-  .urlbar-background {
+  /* Classic uses Firefox's joined input and results background. Its open
+     input background must extend into the popover instead of being reset. */
+  #urlbar:not([popover-open]) > .urlbar-background {
     inset: 0 !important;
+  }
+
+  @media not -moz-pref("natsumi.urlbar.do-not-float") {
+    #urlbar[popover-open] > .urlbar-background {
+      inset: 0 !important;
+    }
   }
 
   .urlbar-input-container {

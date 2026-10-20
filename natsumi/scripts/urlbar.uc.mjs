@@ -184,12 +184,11 @@ class NatsumiURLBarController {
             verticalNewTabButton.setAttribute("command", "NatsumiKBS:natsumiNewTab");
         }
 
-        // Remove urlbarView popover
+        // Firefox opens the suggestions with showPopover(), so the view must
+        // keep its popover attribute in both Classic and Floating modes.
         let urlbarView = this.urlBarNode.querySelector(".urlbarView");
 
-        if (urlbarView.hasAttribute("popover")) {
-            urlbarView.removeAttribute("popover");
-        } else {
+        if (!urlbarView.hasAttribute("popover")) {
             this.urlBarNode.setAttribute("natsumi-urlbar-legacy", "");
             urlbarView.setAttribute("natsumi-urlbar-legacy", "");
         }
