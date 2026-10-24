@@ -40,6 +40,12 @@ SOFTWARE.
 /* Base Natsumi design (Blade) */
 @media not -moz-pref("natsumi.tabs.use-custom-type") {
   #tabbrowser-arrowscrollbox {
+    @media -moz-pref("sidebar.verticalTabs") {
+      > .tabbrowser-tab, tab-group > .tabbrowser-tab {
+        padding: 0 !important;
+      }
+    }
+
     /*noinspection CssInvalidFunction*/
     .tabbrowser-tab {
       --natsumi-tab-highlight-color: var(--natsumi-primary-color);
@@ -61,8 +67,6 @@ SOFTWARE.
       }
 
       @media -moz-pref("sidebar.verticalTabs") {
-        padding: 0 !important;
-
         .tab-group-line {
           display: none !important;
         }

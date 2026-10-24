@@ -315,7 +315,7 @@ SOFTWARE.
     }
 
     tab-split-view-wrapper {
-      --natsumi-split-view-margin-right: 0 !important;
+      margin-right: 0 !important;
       border-radius: 4px 0 0 4px !important;
 
       &[hasactivetab] {
