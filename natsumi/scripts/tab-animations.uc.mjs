@@ -41,6 +41,12 @@ class NatsumiTabAnimationManager {
             return;
         }
 
+        if (tab.splitview && tab.splitview === previousTab.splitview) {
+            this.stopAnimation(tab, "natsumi-tab-switch-animation");
+            this.clearPageTransition();
+            return;
+        }
+
         if (!this.openingTabs.has(tab)) {
             this.restartAnimation(tab, "natsumi-tab-switch-animation", "", 167);
         }
