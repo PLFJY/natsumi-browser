@@ -31,7 +31,8 @@ SOFTWARE.
   /* Most of the code here will probably be rewritten once the final version of Nova drops, */
   /* because Mozilla reverted a lot for FF156. */
   @media not -moz-pref("natsumi.theme.islands") {
-    #navigator-toolbox {
+    /* Preserve Firefox's inline negative margin while fullscreen chrome is hidden. */
+    :where(:root:not([fullscreenNavToolboxHidden])) #navigator-toolbox {
       margin-block-end: unset !important;
 
       @media not -moz-pref("natsumi.theme.single-toolbar") {
@@ -144,8 +145,11 @@ SOFTWARE.
       background-image: none !important;
       background-color: var(--toolbar-background-color) !important;
       border: 1px solid var(--chrome-content-separator-color) !important;
-      margin: var(--natsumi-browser-separation) !important;
       border-radius: var(--natsumi-browser-border-radius) !important;
+
+      :where(:root:not([fullscreenNavToolboxHidden])) & {
+        margin: var(--natsumi-browser-separation) !important;
+      }
     }
 
     #browser {
@@ -391,7 +395,6 @@ SOFTWARE.
 
     &[inFullscreen]:not([inDOMFullscreen]) {
       #navigator-toolbox {
-        margin: var(--natsumi-browser-separation) !important;
         border-radius: var(--chrome-block-radius) !important;
       }
 
@@ -546,7 +549,7 @@ SOFTWARE.
       }
 
       @media -moz-pref("natsumi.theme.single-toolbar") {
-        #navigator-toolbox {
+        :where(:root:not([fullscreenNavToolboxHidden])) #navigator-toolbox {
           margin: 0 !important;
         }
       }
