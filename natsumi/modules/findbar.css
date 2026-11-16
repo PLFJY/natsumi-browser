@@ -55,10 +55,16 @@ SOFTWARE.
 }
 
 @media not -moz-pref("natsumi.findbar.disabled") {
+  .browserContainer {
+    position: relative;
+  }
+
   /*noinspection CssInvalidFunction*/
   findbar {
     display: flex !important;
-    position: fixed;
+    /* Anchor to web content, including browserContainer grid layouts. */
+    position: absolute;
+    grid-area: browserstack !important;
     top: 20px;
     width: min(550px, 90%);
     right: 20px;
