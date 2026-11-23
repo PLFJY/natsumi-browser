@@ -13,6 +13,19 @@
 
 ![](./images/main-backgroundless.webp)
 
+> [!NOTE]  
+> This is a customized version edited by PLFJY who added these features below:
+>
+> 1. Fluent-like page transitions
+> 2. More timely fixes for styling errors
+>
+> In order to better keep up with the upstream, PLFJY will use force-push to update new version at every time natsumi release a new version. I'll follow up to the upstream as soon as possible. Therefore, please use the command below when these is an update from the upstream. :
+>
+> ```shell
+> git fetch origin
+> git reset --hard origin/main
+> ```
+
 ## Meet Natsumi! 🦋
 Meet Natsumi Browser (or Natsumi, for short) - a browser mod that truly puts you in control.
 
@@ -371,7 +384,7 @@ If you have Natsumi Append installed, most of these can be tweaked through the p
   - `firedragon`: FireDragon
 - `natsumi.browser.disable-auto-detect` (boolean): Disables automatic browser detection. Use this if you
   need to manually set the browser type. **Requires restart to take effect.**
-</details>
+  </details>
 
 ## Browser support
 All browsers must be based on Firefox 140 or above.
